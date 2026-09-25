@@ -42,9 +42,14 @@
     "@earendil-works/pi-coding-agent": "0.87.1",
     "@oxlint/plugins": "1.85.0",
     "@types/node": "24.13.6",
+    "@types/semver": "7.8.0",
     "oxfmt": "0.70.0",
     "oxlint": "1.85.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "semver": "7.8.5",
+    "zod": "4.6.5"
   }
 }
