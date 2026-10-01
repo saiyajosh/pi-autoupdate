@@ -7,8 +7,8 @@ Automatically check for and install Pi and Pi-managed package updates when an in
 ## Try locally
 
 ```sh
-npm ci --ignore-scripts
-npm run check
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run check
 pi --extension ./index.ts
 ```
 
@@ -43,6 +43,40 @@ The agent directory respects `PI_CODING_AGENT_DIR`. Missing properties default t
 
 ## Development
 
-`npm run check` runs strict TypeScript checking, Oxlint with vendored anti-slop rules, formatting verification and unit tests. `npm run format` formats owned source. CI runs the same checks. The npm tarball includes the extension and its runtime dependencies are declared in `dependencies`; Pi itself is a peer dependency. To inspect the publish contents, run `npm pack --dry-run`.
+Use Node **>=22.19.0** and **pnpm 12.8.1**, pinned in `package.json` via `packageManager`. See [pnpm installation](https://pnpm.io/installation) if pnpm is not available. Commit `pnpm-lock.yaml`; do not regenerate an npm lockfile.
 
-No publish command runs automatically.
+`pnpm run check` runs strict TypeScript checking, Oxlint with vendored anti-slop rules, formatting verification and tests. `pnpm run format` formats owned source. CI installs with `--frozen-lockfile --ignore-scripts` and runs the same checks. The package smoke test creates the actual release tarball, checks its contents, installs only its cached runtime dependencies, and verifies that Pi can load the extracted extension. It requires `tar` on PATH (available on macOS and Linux).
+
+The npm tarball includes the TypeScript extension sources, README, license and manifest; no compilation step is needed because Pi loads TypeScript extensions. Runtime dependencies are declared in `dependencies`; Pi itself remains a host-provided peer dependency. Tests, development tools and lockfiles are not shipped. Inspect the publish contents with `pnpm run pack:check`.
+
+## Publishing to npm
+
+Publishing is manual; CI does not publish or hold npm credentials. Development uses pnpm, but the package is still published to the public npm registry and installed by users with `pi install npm:pi-autoupdate`.
+
+1. Merge the intended changes, including any other pending feature PRs, into `main`. Choose the release version in `package.json` (currently `0.1.0`); for subsequent releases use a new version. Run `pnpm install --lockfile-only --ignore-scripts` after manifest changes, then commit and push the release changes.
+2. From a clean, up-to-date `main`, validate and preview the package:
+
+   ```sh
+   pnpm install --frozen-lockfile --ignore-scripts
+   pnpm run check
+   pnpm run pack:check
+   ```
+
+3. Authenticate with an npm account permitted to publish this package, with two-factor authentication enabled:
+
+   ```sh
+   pnpm login --registry https://registry.npmjs.org/
+   pnpm whoami --registry https://registry.npmjs.org/
+   ```
+
+4. Explicitly publish:
+
+   ```sh
+   pnpm publish --publish-branch main
+   ```
+
+   `publishConfig` selects the public npm registry and public access. pnpm checks the branch and Git state; `prepublishOnly` reruns the quality gates and package preview before upload. Do not bypass these checks with `--no-git-checks` or `--ignore-scripts`. Provide an OTP when requested; never commit tokens or credentials.
+
+5. Verify the published version with `pnpm view pi-autoupdate version`, then create and push its matching Git tag (for example, `v0.1.0`). Smoke-test installation in an isolated Pi agent directory with automatic updates disabled before normal use.
+
+No publish command runs automatically. Registry name availability and account permissions must be confirmed when publishing.
