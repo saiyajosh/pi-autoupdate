@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { test } from "node:test";
@@ -10,7 +10,7 @@ import { z } from "zod";
 const exec = promisify(execFile);
 
 test(
-  "npm tarball includes only release files and loads with standalone runtime dependencies",
+  "pnpm tarball includes only release files and loads with standalone runtime dependencies",
   { timeout: 60_000 },
   async () => {
     const dir = await mkdtemp(join(tmpdir(), "pi-autoupdate-package-"));
@@ -51,16 +51,19 @@ test(
 
       assert.deepEqual(manifest.pi.extensions, ["./index.ts"]);
 
-      // Use cached production dependencies only; Pi supplies its own host API.
+      // A frozen lockfile install needs cached package contents, not registry metadata.
+      // Copy it only after checking the tarball: lockfiles are not release files.
+      await copyFile(join(process.cwd(), "pnpm-lock.yaml"), join(packageDir, "pnpm-lock.yaml"));
+      // Install production dependencies only; Pi supplies its own host API.
       await exec(
         "pnpm",
         [
           "install",
           "--prod",
+          "--frozen-lockfile",
           "--ignore-scripts",
           "--offline",
           "--ignore-workspace",
-          "--config.auto-install-peers=false",
         ],
         { cwd: packageDir, timeout: 30_000 },
       );
