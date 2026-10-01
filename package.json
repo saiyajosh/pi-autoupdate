@@ -25,7 +25,8 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -33,16 +34,19 @@
     "format:check": "oxfmt --check index.ts src test",
     "format": "oxfmt index.ts src test",
     "test": "node --import tsx --test test/*.test.ts",
+    "test:tui": "node --import tsx --test --test-concurrency=1 test/tui/*.tui.ts",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
   },
   "engines": {
     "node": ">=22.19.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.87.1",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-tui": "0.99.1",
     "@oxlint/plugins": "1.85.0",
     "@types/node": "24.13.6",
     "@types/semver": "7.8.0",
+    "@xterm/headless": "6.0.0",
     "oxfmt": "0.70.0",
     "oxlint": "1.85.0",
     "tsx": "4.23.15",
