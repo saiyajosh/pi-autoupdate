@@ -14,6 +14,9 @@ jobs:
   publish:
     if: github.actor == 'saiyajosh' && github.repository == 'saiyajosh/pi-autoupdate' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,11 +27,10 @@ jobs:
           node-version: '24'
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-          registry-url: https://registry.npmjs.org/
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@11
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm run check
       - run: pnpm run pack:check
-      - name: Publish release
-        run: pnpm publish --publish-branch main
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish release via OIDC
+        run: npm publish --access public
