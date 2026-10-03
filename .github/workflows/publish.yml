@@ -15,12 +15,13 @@ jobs:
     if: github.actor == 'saiyajosh' && github.repository == 'saiyajosh/pi-autoupdate' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -30,7 +31,30 @@ jobs:
       - name: Install npm with trusted publishing support
         run: npm install --global npm@11
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check release tag
+        id: release
+        shell: bash
+        run: |
+          VERSION="$(node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import semver from "semver";
+            const { version } = JSON.parse(readFileSync("package.json", "utf8"));
+            if (semver.valid(version) !== version) throw new Error("Invalid release version");
+            console.log(version);
+          ')"
+          TAG="v$VERSION"
+          if git show-ref --verify --quiet "refs/tags/$TAG"; then
+            echo "::error::Release tag $TAG already exists. Bump package.json before publishing."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - run: pnpm run check
       - run: pnpm run pack:check
       - name: Publish release via OIDC
         run: npm publish --access public
+      - name: Tag published commit
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$RELEASE_TAG"

@@ -37,7 +37,7 @@ test(
 
       const manifest = z
         .object({
-          name: z.literal("pi-autoupdate"),
+          name: z.literal("@saiyajosh/pi-autoupdate"),
           version: z.string(),
           dependencies: z.object({ semver: z.string(), zod: z.string() }),
           peerDependencies: z.object({ "@earendil-works/pi-coding-agent": z.literal("*") }),
