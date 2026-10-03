@@ -40,6 +40,8 @@ test("Pi loads the packaged entry point and registers /autoupdate-config", async
 
       assert.equal(exitCode, 0, stderr);
       assert.match(stdout, /"name":"autoupdate-config"/);
+      assert.match(stdout, /"name":"autoupdate-report"/);
+      assert.doesNotMatch(stdout, /"name":"autoupdate-status"/);
     } finally {
       clearTimeout(timeout);
     }

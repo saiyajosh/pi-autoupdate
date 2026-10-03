@@ -1,16 +1,24 @@
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import {
   DefaultPackageManager,
   getAgentDir,
   SettingsManager,
   VERSION,
 } from "@earendil-works/pi-coding-agent";
-import { gt, valid } from "semver";
+import { gt, gte, valid } from "semver";
 import { z } from "zod";
 import type { AutoUpdateConfig } from "./config.js";
 
+export type PackageUpdate = Awaited<
+  ReturnType<DefaultPackageManager["checkForAvailableUpdates"]>
+>[number];
+
 export interface PendingUpdates {
   piVersion?: string;
-  packages: string[];
+  packages: PackageUpdate[];
 }
 
 export type UpdateTarget = "self" | "extensions" | "all";
@@ -36,7 +44,7 @@ export async function checkUpdates(
   config: AutoUpdateConfig,
   dependencies: {
     latestVersion: () => Promise<string>;
-    packages: (cwd: string) => Promise<string[]>;
+    packages: (cwd: string) => Promise<PackageUpdate[]>;
   } = { latestVersion: fetchLatestVersion, packages: checkPackages },
 ): Promise<PendingUpdates> {
   const [latest, packages] = await Promise.all([
@@ -65,16 +73,61 @@ async function fetchLatestVersion(): Promise<string> {
   return result.version;
 }
 
-async function checkPackages(cwd: string): Promise<string[]> {
+export function verifyPiVersion(installed: string, expected: string): boolean {
+  return Boolean(valid(installed) && valid(expected) && gte(installed, expected));
+}
+
+function packageManager(cwd: string): DefaultPackageManager {
   const agentDir = getAgentDir();
 
-  const manager = new DefaultPackageManager({
+  return new DefaultPackageManager({
     cwd,
     agentDir,
     settingsManager: SettingsManager.create(cwd, agentDir),
   });
+}
 
-  const updates = await manager.checkForAvailableUpdates();
+export async function checkPackages(cwd: string): Promise<PackageUpdate[]> {
+  return packageManager(cwd).checkForAvailableUpdates();
+}
 
-  return updates.map((update) => update.displayName);
+/** Read local installation state, not a network check that can silently fail. */
+export async function packageRevision(cwd: string, update: PackageUpdate): Promise<string> {
+  const installed = packageManager(cwd)
+    .listConfiguredPackages()
+    .find((pkg) => pkg.source === update.source && pkg.scope === update.scope);
+
+  if (!installed?.installedPath) throw new Error(`Cannot locate ${update.displayName}`);
+
+  if (update.type === "npm") {
+    const pkg = z
+      .object({ version: z.string() })
+      .parse(JSON.parse(await readFile(join(installed.installedPath, "package.json"), "utf8")));
+
+    if (!valid(pkg.version)) throw new Error(`Invalid installed version for ${update.displayName}`);
+
+    return pkg.version;
+  }
+
+  const result = await promisify(execFile)("git", ["rev-parse", "HEAD"], {
+    cwd: installed.installedPath,
+    timeout: 10_000,
+  });
+
+  const revision = result.stdout.trim();
+
+  if (!/^[a-f0-9]{40,64}$/.test(revision))
+    throw new Error(`Invalid git revision for ${update.displayName}`);
+
+  return revision;
+}
+
+export function verifyPackageRevision(
+  type: PackageUpdate["type"],
+  before: string,
+  after: string,
+): boolean {
+  return type === "npm"
+    ? Boolean(valid(before) && valid(after) && gt(after, before))
+    : /^[a-f0-9]{40,64}$/.test(before) && /^[a-f0-9]{40,64}$/.test(after) && before !== after;
 }
