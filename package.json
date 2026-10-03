@@ -1,6 +1,6 @@
 {
   "name": "@saiyajosh/pi-autoupdate",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automatically update Pi and installed Pi packages on startup",
   "type": "module",
   "license": "MIT",
