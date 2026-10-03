@@ -1,5 +1,5 @@
 {
-  "name": "pi-autoupdate",
+  "name": "@saiyajosh/pi-autoupdate",
   "version": "0.1.0",
   "description": "Automatically update Pi and installed Pi packages on startup",
   "type": "module",
