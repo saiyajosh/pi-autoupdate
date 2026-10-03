@@ -1,0 +1,6 @@
+# Require maintainer review of release automation and its ownership rules.
+# Enforcement requires branch protection with code-owner reviews enabled.
+/.github/workflows/ @saiyajosh
+/.github/CODEOWNERS @saiyajosh
+/package.json @saiyajosh
+/pnpm-lock.yaml @saiyajosh
