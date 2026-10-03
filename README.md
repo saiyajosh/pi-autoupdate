@@ -223,25 +223,3 @@ Package checks use Pi's exported `DefaultPackageManager.checkForAvailableUpdates
 Test both extension loading and update behavior when changing Pi compatibility.
 
 Restarts launch a child Pi on the same terminal. The original process exits when the child finishes.
-
-## Publish a release
-
-Only the maintainer can run the manual **Publish to npm** workflow. Pushes and pull requests do not publish packages.
-
-### New versions
-
-1. Change `version` in `package.json` through a pull request.
-2. Merge the pull request.
-3. Run **Publish to npm** on `main`.
-
-The workflow publishes the selected commit. After npm succeeds, it creates a matching `v<version>` Git tag on that commit. An existing release tag blocks publishing.
-
-### First release
-
-Publish the first version using npm authentication, then configure trusted publishing. Create the first release tag manually.
-
-### If tagging fails
-
-If npm publishing succeeds but the tag push fails, **do not publish the same version again**.
-
-Create and push the matching tag on the commit published by that workflow run.
