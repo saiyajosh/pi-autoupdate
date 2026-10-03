@@ -1,25 +1,27 @@
 # pi-autoupdate
 
-Automatically check for and install Pi and Pi-managed package updates when an interactive Pi session starts. If an update is installed, Pi restarts into the same session. Both update targets are enabled by default.
+Keep Pi and your installed Pi packages up to date automatically. This extension checks for updates when you start an interactive Pi session, installs available updates, and restarts Pi into the same saved session. If nothing needs updating, your session continues without a restart.
 
-> Prototype: test locally before using with your everyday Pi installation. Installing this package permits it to run update commands on your behalf at startup.
+> This is a prototype tested against **Pi 0.99.1**. It runs update commands on your behalf, so use it only with Pi packages you trust. Automatic updates for both Pi and installed packages are enabled by default.
 
-## Try locally
+## Install and use
 
-```sh
-npm ci --ignore-scripts
-npm run check
-pi --extension ./index.ts
-```
-
-For an installed copy instead of one-run testing:
+Install from this repository:
 
 ```sh
-pi install ./                         # local package; no npm publication required
-# Once published: pi install npm:pi-autoupdate
+pi install git:github.com/saiyajosh/pi-autoupdate
 ```
 
-### See what changed
+Start Pi normally. Updates are checked at startup; there is no extra command to run.
+
+Use `/autoupdate-config` in Pi to toggle either setting:
+
+- **Update Pi** — keep Pi itself up to date.
+- **Update extensions** — keep Pi-managed installed packages up to date.
+
+Changes apply the next time you launch Pi. Turn both settings off to disable automatic updates.
+
+## See what changed
 
 When updates are detected, a themed **AUTO-UPDATE** panel names Pi and each package, shows installation and verification progress, and marks each result with a green **✓** or red **✗**. Pi's executable version is checked against the expected release; packages must show an increased installed npm version or a changed Git commit. A successful command alone is not considered proof of an update.
 
@@ -29,11 +31,9 @@ Use `/autoupdate-report` to open a dismissible dialog showing the most recent at
 
 For a quick check outside Pi, run `pi --version` to inspect the installed Pi executable and `pi list` to locate configured package installations. Packages can contain extensions, skills, prompts or themes; “package updated” does not necessarily mean an extension changed.
 
-### Configuration
+## Configuration
 
-After launching, use `/autoupdate-config` to toggle **Update Pi automatically when a new release is available** and **Update all Pi extensions automatically when a new release is available** independently. Changes take effect on the next launch.
-
-Alternatively, edit `<agent-dir>/autoupdate.json` (normally `~/.pi/agent/autoupdate.json`):
+Settings are saved in `~/.pi/agent/autoupdate.json`. If you use `PI_CODING_AGENT_DIR`, the file lives in that agent directory instead. `/autoupdate-config` creates the file when you first change a setting; you can also create or edit it yourself:
 
 ```json
 {
@@ -42,25 +42,63 @@ Alternatively, edit `<agent-dir>/autoupdate.json` (normally `~/.pi/agent/autoupd
 }
 ```
 
-The agent directory respects `PI_CODING_AGENT_DIR`. Missing properties default to `true`; unknown keys, non-boolean values and malformed JSON **prevent automatic updates** until corrected. The command writes this file on the first change. Manual edits take effect on the next launch (no `/reload` required).
+No config file is required: both settings default to `true`, including any omitted properties. To disable updates before your first launch, create this file with both values set to `false`.
 
-## Behavior and limitations
+Only these two keys and boolean values are accepted. Invalid JSON, unknown keys, or other value types stop automatic updates and produce a warning until you fix the file. Manual edits apply on the next launch; you do not need to run `/reload`.
 
-- On an interactive startup, check the enabled targets, use Pi's native `pi update` command when updates are pending, then restart into the current saved session (or `--no-session`). No update means no restart. A restart marker skips the next automatic check to avoid loops.
-- Honors `PI_OFFLINE` and `PI_SKIP_VERSION_CHECK`. Skips automatic updates in print, JSON and RPC modes to keep those process interfaces stable, and on session switches or `/reload`.
-- Only **Pi-managed installed packages** can be updated. Manually copied extension files, pinned package versions/git refs and local sources are not upgraded by Pi's package updater. Some standalone installations require a manual Pi self-update.
-- Package checks use Pi's exported `DefaultPackageManager.checkForAvailableUpdates()` API. This API is typed and exported in Pi 0.87.1 but is not guaranteed stable across future Pi releases. This prototype is tested against Pi 0.99.1; verify compatibility before publishing new releases.
-- Network, filesystem, update and verification failures leave the current session open and show a warning or error notification with details available through `/autoupdate-report`. An update command can make partial changes before failing; restart manually if Pi reports that this happened. The restart spawns a child Pi attached to the same terminal, then shuts down the original when the child exits.
-- Updates execute code from Pi and installed packages. Install only trusted sources, and consider the implications of automatic updates before enabling them.
+## What gets updated—and when
 
-## Development
+- **Interactive startup only.** Checks do not run in print, JSON, or RPC mode, when switching sessions, or on `/reload`. Setting `PI_OFFLINE` or `PI_SKIP_VERSION_CHECK` also skips automatic updates.
+- **Pi-managed packages only.** The “Update extensions” setting covers installed Pi packages, not just extension files. Manually copied files, pinned package versions or Git refs, and local sources are not upgraded by Pi's package updater.
+- **Pi's own updater does the work.** The extension uses `pi update` for the enabled targets. Some standalone Pi installations cannot update themselves automatically; follow Pi's manual update guidance if you see a warning.
+- **A restart happens after a successful update.** Pi resumes the current saved session, or preserves `--no-session`. The restarted process skips one automatic check to prevent a restart loop.
+- **Failures leave your session open.** Network, filesystem, update, or verification errors produce a warning or error notification with details available through `/autoupdate-report`. An update can partially complete before failing; if Pi reports that, restart manually to load any changes.
 
-`npm run check` runs strict TypeScript checking, Oxlint with vendored anti-slop rules, formatting verification and unit tests. `npm run format` formats owned source. CI runs the same checks. The npm tarball includes the extension and its runtime dependencies are declared in `dependencies`; Pi itself is a peer dependency. To inspect the publish contents, run `npm pack --dry-run`.
+Updates run code from Pi and your installed packages. If you prefer to review changes before installing them, disable automatic updates and update manually.
+
+## Run from source
+
+You need **Node >=22.19.0**, **pnpm 12.8.1** (pinned in `package.json`), and Pi. See [pnpm installation](https://pnpm.io/installation) if needed.
+
+```sh
+git clone https://github.com/saiyajosh/pi-autoupdate.git
+cd pi-autoupdate
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run check
+pi --extension ./index.ts
+```
+
+The last command loads the extension for that launch only. It uses your normal Pi configuration and can perform real updates; disable both settings first if you only want to inspect the configuration UI.
+
+To try it without changing your everyday agent configuration, use a separate agent directory with updates disabled:
+
+```sh
+DEMO_AGENT_DIR="$(mktemp -d)"
+printf '%s\n' '{"updatePi":false,"updateExtensions":false}' > "$DEMO_AGENT_DIR/autoupdate.json"
+PI_CODING_AGENT_DIR="$DEMO_AGENT_DIR" pi --extension ./index.ts
+```
+
+For a persistent local installation, run `pi install ./` from the repository. Local sources are not automatically upgraded by Pi's package updater.
+
+### Source layout and checks
+
+- `index.ts` registers the startup handler, `/autoupdate-config`, and `/autoupdate-report` commands.
+- `src/config.ts` reads, validates, and saves settings.
+- `src/updates.ts` checks available versions and selects update targets.
+- `src/restart.ts` restarts Pi into the current session.
+- `src/report.ts` persists update reports and renders progress and report views.
+- `test/` covers configuration, update selection, restart arguments, extension loading, and release packaging.
+
+There is no compilation step: Pi loads the TypeScript extension directly. The release tarball contains the extension sources, README, license, and manifest. Runtime dependencies are included in the manifest; Pi is supplied by the host. Tests, development tools, and lockfiles are not shipped.
+
+`pnpm run check` runs TypeScript checking, Oxlint with vendored anti-slop rules, formatting verification, and tests. The package smoke test packs the actual release tarball, checks its contents, installs its production dependencies offline using the repository lockfile, and verifies that Pi loads the extracted extension. It requires `tar` on your PATH (available on macOS and Linux).
+
+Use `pnpm run format` to format source and tests, and `pnpm run pack:check` to inspect release contents.
 
 ### Ad-hoc TUI end-to-end tests
 
 ```sh
-npm run test:tui
+pnpm run test:tui
 ```
 
 Requires **macOS or Linux**, **Python 3** (`python3` on PATH), and the installed development dependencies. The suite launches real Pi in a pseudo-terminal and interprets its rendered screen using `@xterm/headless`; it does not need a provider login or API key. It typically takes around 20 seconds.
@@ -73,6 +111,21 @@ Coverage includes:
 
 Each launch uses a temporary agent directory and working directory, disables resource discovery, and loads a test-only adapter around the real extension. HTTP fetches, update commands and the failed-restart boundary are intercepted. **No updates are installed and no real restart is performed.** Timeout results are simulated, not delayed for five minutes. Temporary directories and child processes are cleaned up, including after test failures; timeout diagnostics include the rendered terminal screen.
 
-These tests live under `test/tui/` and run **only when explicitly invoked**. They are excluded from `npm test`, `npm run check`, and CI execution. Normal typechecking, linting and formatting still cover their TypeScript sources.
+These tests live under `test/tui/` and run **only when explicitly invoked**. They are excluded from `pnpm test`, `pnpm run check`, and CI execution. Normal typechecking, linting and formatting still cover their TypeScript sources.
 
-No publish command runs automatically.
+## Contributing
+
+Bug reports and focused pull requests are welcome. For a bug report, include your Pi version, installation method, operating system, relevant settings, and steps to reproduce. Remove credentials and private session data from logs.
+
+For a code change:
+
+1. Fork the repository and create a branch for your fix or feature.
+2. Install dependencies and run from source as described above.
+3. Add or update tests for the behavior you change.
+4. Run `pnpm run format` and `pnpm run check`, then open a pull request explaining the change and how you tested it.
+
+Use pnpm and commit `pnpm-lock.yaml` when dependencies change; do not add an npm lockfile. CI uses a frozen lockfile, skips dependency install scripts, and runs the same checks plus the release-content preview.
+
+Package update checks currently rely on Pi's exported `DefaultPackageManager.checkForAvailableUpdates()` API. It is typed and exported in Pi 0.87.1, but may change in later releases. This prototype is tested against Pi 0.99.1. Compatibility changes should test both extension loading and update behavior. Restarts launch a child Pi on the same terminal; the original process exits when that child finishes.
+
+Releases are handled by a maintainer-only, manually triggered GitHub Actions workflow. Pushes and pull requests never publish a package.

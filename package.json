@@ -4,6 +4,15 @@
   "description": "Automatically update Pi and installed Pi packages on startup",
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@12.8.1",
+  "homepage": "https://github.com/saiyajosh/pi-autoupdate#readme",
+  "bugs": {
+    "url": "https://github.com/saiyajosh/pi-autoupdate/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "keywords": [
     "pi-package",
     "pi-extension",
@@ -35,7 +44,9 @@
     "format": "oxfmt index.ts src test",
     "test": "node --import tsx --test test/*.test.ts",
     "test:tui": "node --import tsx --test --test-concurrency=1 test/tui/*.tui.ts",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm test",
+    "pack:check": "pnpm pack --dry-run",
+    "prepublishOnly": "pnpm run check && pnpm run pack:check"
   },
   "engines": {
     "node": ">=22.19.0"
