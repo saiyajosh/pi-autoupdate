@@ -8,6 +8,14 @@ After installing and verifying updates, it restarts Pi in the same saved session
 
 ## Install
 
+Install the latest release from npm:
+
+```sh
+pi install npm:@saiyajosh/pi-autoupdate
+```
+
+To install from the GitHub repository instead:
+
 ```sh
 pi install git:github.com/saiyajosh/pi-autoupdate
 ```
