@@ -94,6 +94,8 @@ An update can partially complete before failing. If Pi reports partial changes, 
 
 Use `/autoupdate-report` to view the most recent attempted update. It includes:
 
+<img width="731" height="235" alt="image" src="https://github.com/user-attachments/assets/7ebf39c0-eaa0-459c-a468-fcd79df38321" />
+
 - Pi and package names.
 - Before and after versions or commits.
 - Timestamp, working directory, and failures.
