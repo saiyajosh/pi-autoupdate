@@ -71,6 +71,10 @@ If you want to review changes before installing them, disable automatic updates 
 
 The **AUTO-UPDATE** panel lists Pi and each package, shows progress, and marks each result with **✓** or **✗**.
 
+<img src="docs/images/autoupdate-progress.png" width="505" alt="Auto-update progress panel showing Pi and two npm packages being installed" />
+
+*Progress panel captured from Pi with example update data.*
+
 A successful update command is not enough:
 
 - Pi's executable version must match the expected release.
@@ -94,11 +98,13 @@ An update can partially complete before failing. If Pi reports partial changes, 
 
 Use `/autoupdate-report` to view the most recent attempted update. It includes:
 
-<img width="731" height="235" alt="image" src="https://github.com/user-attachments/assets/7ebf39c0-eaa0-459c-a468-fcd79df38321" />
-
 - Pi and package names.
 - Before and after versions or commits.
 - Timestamp, working directory, and failures.
+
+<img src="docs/images/autoupdate-report.png" width="707" alt="Auto-update report dialog showing verified Pi and package updates, versions, timestamp, and keyboard controls" />
+
+*Report dialog captured from Pi with example update data.*
 
 Press **Esc** or **Enter** to close the dialog. Use **↑/↓** to scroll. This command does not check for or install updates.
 
